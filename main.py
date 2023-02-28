@@ -19,10 +19,10 @@ nlp_ru = spacy.load('ru_core_news_sm')
 bot = Bot(token='6185530892:AAHJlXZGun7fER2PkEZ4wj0Y12_7ZDeA4jE')
 
 
-def start(update: Update, context: CallbackContext) -> None:
+def start(update: Update) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Hi {user.first_name} 😃! Type a city name to get weather info💬")
+    bot.send_message(chat_id=update.effective_chat.id, text=f"Hi {user.first_name} 😃! Type a city name to get weather info💬")
 
 def extract_city(text, language='en'):
     if language == 'en':
@@ -44,6 +44,15 @@ def get_weather(city):
     response = requests.get(url)
     if response.status_code == 200:
         data = json.loads(response.text)
+
+        print(data['cod'])
+
+        if(data['cod'] == 404):
+            return None
+
+        if(data['cod'] == '404'):
+            return None
+
         weather = data['weather'][0]['main']
         temperature = data['main']['temp']
         wind_speed = data['wind']['speed']
@@ -67,10 +76,11 @@ def get_clothing_recommendation(temperature, language=nlp_en):
 
 def send_weather(chat_id, text):
     language = 'en'
-    city = extract_city(text, language)
-    if not city:
-        bot.send_message(chat_id, "Sorry, I couldn't recognize the city name in your message.😥")
-        return
+    city = text
+    # city = extract_city(text, language)
+    # if not city:
+    #     bot.send_message(chat_id, "Sorry, I couldn't recognize the city name in your message.😥")
+    #     return
 
    
     greeting = "Hello! "
@@ -81,7 +91,14 @@ def send_weather(chat_id, text):
     raining = "It's raining 🌧. Wear a raincoat or take an umbrella to stay dry 😉"
    
         
+    weather = get_weather(city)
+
+    if(weather is None):
+        bot.send_message(chat_id, "Sorry, I couldn't get the weather information for this city 😥")
+        return
+
     weather, temperature, wind_speed, thunderstorm = get_weather(city)
+
     if not (weather and temperature):
         bot.send_message(chat_id, "Sorry, I couldn't get the weather information for this city 😥")
         return
@@ -110,7 +127,7 @@ def send_weather(chat_id, text):
 def handle_message(update: Update) -> None:
     """Handle incoming messages that contain a city name."""
     text = update.message.text
-    city = extract_city(text, 'en')
+    city = text
     if city:
         weather_info = city
         if weather_info:
@@ -122,7 +139,23 @@ def handle_message(update: Update) -> None:
 
 def main(request):
     bot = Bot(token='6185530892:AAHJlXZGun7fER2PkEZ4wj0Y12_7ZDeA4jE')
+
     if request.method == "POST":
         update = Update.de_json(request.get_json(force=True), bot)
-        handle_message(update)
+        if(update is None):
+            return "some error"
+        if(update.message is None):
+            return "some error"
+
+        command=update.message.text
+        if(command == ''):
+            return "empty command"
+        if(command == 'Aniston'):
+            return "special case error"
+
+        print(command)
+        if command == '/start':
+            start(update)
+        else:
+            handle_message(update)
     return "okay"
