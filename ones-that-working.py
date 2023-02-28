@@ -19,10 +19,10 @@ nlp_ru = spacy.load('ru_core_news_sm')
 bot = Bot(token='6185530892:AAHJlXZGun7fER2PkEZ4wj0Y12_7ZDeA4jE')
 
 
-def start(update: Update, context: CallbackContext) -> None:
+def start(update: Update) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Hi {user.first_name}! How can I help you?")
+    bot.send_message(chat_id=update.effective_chat.id, text=f"Hi {user.first_name} 😃! Type a city name to get weather info💬")
 
 def extract_city(text, language='en'):
     if language == 'en':
@@ -55,78 +55,80 @@ def get_weather(city):
 def get_clothing_recommendation(temperature, language=nlp_en):
     if language == nlp_en:
         if temperature > 30:
-            return "It's very hot. Wear lightweight, light-colored, and loose-fitting clothes to stay cool."
+            return "It's very hot 🏜. Wear lightweight, light-colored, and loose-fitting clothes to stay cool 😉"
         elif temperature > 20:
-            return "It's warm. Wear light-colored and breathable clothes to stay comfortable."
+            return "It's warm 🌡. Wear light-colored and breathable clothes to stay comfortable 😉"
         elif temperature > 10:
-            return "It's mild. Wear a light jacket or a sweater to stay warm."
+            return "It's mild ☁. Wear a light jacket or a sweater to stay warm 😉"
         elif temperature > 0:
-            return "It's chilly. Wear a warm jacket or a coat to stay warm."
+            return "It's chilly 🌬. Wear a warm jacket or a coat to stay warm 😉"
         else:
-            return "It's very cold. Wear a heavy coat, a hat, and gloves to stay warm."
+            return "It's very cold❄. Wear a heavy coat, a hat, and gloves to stay warm 😉"
 
-def send_weather(chat_id, text, language=nlp_en):
-    
+def send_weather(chat_id, text):
+    language = 'en'
     city = extract_city(text, language)
     if not city:
-        bot.send_message(chat_id, "Sorry, I couldn't recognize the city name in your message.")
+        bot.send_message(chat_id, "Sorry, I couldn't recognize the city name in your message.😥")
         return
 
-    
+   
     greeting = "Hello! "
     the_weather_in = "The weather in "
     and_the_temperature_is = " and the temperature is "
     its = "It's "
-    windy = "windy. Wear a windbreaker or a jacket to protect yourself from the wind."
-    raining = "It's raining. Wear a raincoat or take an umbrella to stay dry."
+    windy = "windy 🌪. Wear a windbreaker or a jacket to protect yourself from the wind 😉"
+    raining = "It's raining 🌧. Wear a raincoat or take an umbrella to stay dry 😉"
    
         
     weather, temperature, wind_speed, thunderstorm = get_weather(city)
     if not (weather and temperature):
-        bot.send_message(chat_id, "Sorry, I couldn't get the weather information for this city.")
+        bot.send_message(chat_id, "Sorry, I couldn't get the weather information for this city 😥")
         return
-        
+       
     # Convert temperature from Kelvins to Celsius
     temperature = temperature - 273.15
-    
+   
     message = f'{greeting}{the_weather_in}{city}{and_the_temperature_is}{temperature:.1f} °C. {its}{weather}.\n\n'
     clothing_recommendation = get_clothing_recommendation(temperature)
     message += clothing_recommendation
-    
+   
     if wind_speed > 10:
         message += f"\n\n{its}{windy}"
-    
+   
     if 'Rain' in weather:
         message += f"\n\n{its}{raining}"
-        
+       
     if thunderstorm:
         if language is nlp_en:
-            message += '\n\n⚠️ Warning: Thunderstorm expected. Please take necessary precautions.'
+            message += '\n\n⚠️ Warning: Thunderstorm expected🌩. Please take necessary precautions.'
 
 
     bot.send_message(chat_id, message)
 
 
-def handle_message(update: Update, context: CallbackContext) -> None:
+def handle_message(update: Update) -> None:
     """Handle incoming messages that contain a city name."""
     text = update.message.text
-    city = extract_city(text)
+    city = extract_city(text, 'en')
     if city:
         weather_info = city
         if weather_info:
-            send_weather(update.message.chat_id, weather_info, context.user_data.get('language', 'en'))
+            send_weather(update.message.chat_id, weather_info)
         else:
-            bot.send_message(update.message.chat_id, "Sorry, I couldn't find weather information for the city.")
+            bot.send_message(update.message.chat_id, "Sorry, I couldn't find weather information for the city 😥")
     else:
-        bot.send_message(update.message.chat_id, "Sorry, I couldn't recognize the city name in your message.")
+        bot.send_message(update.message.chat_id, "Sorry, I couldn't recognize the city name in your message 😥")
 
-def main():
-    updater = Updater(token='6185530892:AAHJlXZGun7fER2PkEZ4wj0Y12_7ZDeA4jE', use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    updater.start_polling()
-    updater.idle()
+def main(request):
+    bot = Bot(token='6185530892:AAHJlXZGun7fER2PkEZ4wj0Y12_7ZDeA4jE')
 
-if __name__ == '__main__':
-    main()
+    if request.method == "POST":
+        
+        update = Update.de_json(request.get_json(force=True), bot)
+        command=update.message.text
+        if command == '/start':
+            start(update)
+        else:
+            handle_message(update)
+    return "okay"
